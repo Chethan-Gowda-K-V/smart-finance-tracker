@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}AI Assistant | Smart Finance Tracker{% endblock %}
+
+{% block extra_head %}
+<!-- Markdown Parser (marked.js) for AI rich replies rendering -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+{% endblock %}
+
+{% block header_title %}AI Financial Advisor{% endblock %}
+{% block header_subtitle %}Real-time contextual consulting on your expense logs & budgets.{% endblock %}
+
+{% block content %}
+<div class="glass-card flex flex-col h-[70vh] relative overflow-hidden">
+    <!-- Matrix laser line styling -->
+    <div class="scanner-laser opacity-15"></div>
+    
+    <!-- Chat Header -->
+    <div class="p-4 border-b border-slate-800/60 bg-slate-900/30 flex items-center justify-between z-10">
+        <div class="flex items-center gap-3">
+            <div class="relative">
+                <div class="w-9 h-9 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 text-white">
+                    <i class="bi bi-robot"></i>
+                </div>
+                <span class="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-slate-950"></span>
+            </div>
+            <div>
+                <h4 class="text-xs font-bold text-slate-100">Antigravity AI Advisor</h4>
+                <p class="text-[9px] text-slate-500 font-semibold tracking-wider uppercase">Context: {{ user.username }} Portfolio</p>
+            </div>
+        </div>
+        
+        <span class="text-[9px] font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full">Secure JWT Channel</span>
+    </div>
+    
+    <!-- Chat Message Stream -->
+    <div id="chat-messages" class="flex-1 overflow-y-auto p-6 space-y-4 z-10 flex flex-col">
+        <!-- AI Welcome Message -->
+        <div class="flex gap-3 max-w-[80%] items-start">
+            <div class="w-8 h-8 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center flex-shrink-0 text-sm">
+                <i class="bi bi-robot"></i>
+            </div>
+            <div class="p-3.5 rounded-2xl bg-slate-900/40 dark:bg-slate-950/40 border border-slate-800/50 text-xs text-slate-200 leading-relaxed font-medium">
+                Hello {{ user.username }}! I am your <b>Antigravity Financial Advisor</b>. I can scan your budgets, analyze your recent transaction history, suggest savings, and predict future expenses. 
+                <br><br>
+                What would you like to discuss today? Try clicking one of the quick options below!
+            </div>
+        </div>
+    </div>
+    
+    <!-- Typing indicator -->
+    <div id="typing-indicator" class="hidden px-6 py-2 flex gap-2 items-center text-[10px] text-slate-500 font-bold z-10">
+        <i class="bi bi-cpu animate-spin text-indigo-400"></i>
+        <span>AI is thinking...</span>
+    </div>
+    
+    <!-- Quick Recommendation Chips -->
+    <div class="px-6 py-3 border-t border-slate-800/40 bg-slate-950/20 flex flex-wrap gap-2 z-10">
+        <button onclick="sendQuickQuery('Analyze my spending habits')" class="px-2.5 py-1 text-[10px] font-bold rounded-lg border border-slate-700 bg-slate-900/40 hover:bg-indigo-500/10 hover:border-indigo-500/40 text-slate-400 hover:text-indigo-400 transition">
+            🔍 Analyze spending
+        </button>
+        <button onclick="sendQuickQuery('Suggest a monthly budget limit')" class="px-2.5 py-1 text-[10px] font-bold rounded-lg border border-slate-700 bg-slate-900/40 hover:bg-indigo-500/10 hover:border-indigo-500/40 text-slate-400 hover:text-indigo-400 transition">
+            📊 Budget suggestions
+        </button>
+        <button onclick="sendQuickQuery('How do I complete my savings goals?')" class="px-2.5 py-1 text-[10px] font-bold rounded-lg border border-slate-700 bg-slate-900/40 hover:bg-indigo-500/10 hover:border-indigo-500/40 text-slate-400 hover:text-indigo-400 transition">
+            🐷 Savings advice
+        </button>
+    </div>
+    
+    <!-- Input Form -->
+    <div class="p-4 border-t border-slate-800/60 bg-slate-900/30 flex gap-3 z-10">
+        <input type="text" id="chat-input" placeholder="Ask AI Advisor about your portfolio..." class="flex-1 px-4 py-3 rounded-xl text-xs border border-slate-700 bg-slate-950/50 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+        <button id="chat-send-btn" class="w-11 h-11 rounded-xl btn-neon flex items-center justify-center text-sm shadow-md flex-shrink-0">
+            <i class="bi bi-send-fill"></i>
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const chatInput = document.getElementById('chat-input');
+    const sendBtn = document.getElementById('chat-send-btn');
+    const messagesContainer = document.getElementById('chat-messages');
+    const typingIndicator = document.getElementById('typing-indicator');
+
+    function appendMessage(text, isUser = false) {
+        const wrapper = document.createElement('div');
+        wrapper.className = isUser 
+            ? 'flex gap-3 max-w-[80%] items-start self-end flex-row-reverse' 
+            : 'flex gap-3 max-w-[80%] items-start';
+            
+        const avatar = document.createElement('div');
+        avatar.className = isUser
+            ? 'w-8 h-8 rounded-full bg-pink-500/10 border border-pink-500/20 text-pink-400 flex items-center justify-center flex-shrink-0 text-sm'
+            : 'w-8 h-8 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center flex-shrink-0 text-sm';
+        avatar.innerHTML = isUser ? '<i class="bi bi-person-fill"></i>' : '<i class="bi bi-robot"></i>';
+        
+        const bubble = document.createElement('div');
+        bubble.className = isUser
+            ? 'p-3.5 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 text-xs text-slate-100 leading-relaxed font-medium'
+            : 'p-3.5 rounded-2xl bg-slate-900/40 dark:bg-slate-950/40 border border-slate-800/50 text-xs text-slate-200 leading-relaxed font-medium markdown-body';
+            
+        if (isUser) {
+            bubble.textContent = text;
+        } else {
+            // Render markdown content
+            bubble.innerHTML = marked.parse(text);
+        }
+        
+        wrapper.appendChild(avatar);
+        wrapper.appendChild(bubble);
+        messagesContainer.appendChild(wrapper);
+        
+        // Auto scroll to bottom
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    function submitChatMessage() {
+        const text = chatInput.value.trim();
+        if (!text) return;
+        
+        chatInput.value = '';
+        appendMessage(text, true);
+        
+        // Show typing indicator
+        typingIndicator.classList.remove('hidden');
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        
+        fetch('/api/ai/chat/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({ message: text })
+        })
+        .then(res => res.json())
+        .then(data => {
+            typingIndicator.classList.add('hidden');
+            appendMessage(data.reply, false);
+        })
+        .catch(err => {
+            console.error("AI chat failed:", err);
+            typingIndicator.classList.add('hidden');
+            appendMessage("I apologize, but my core processors encountered an error communicating with the main server database. Please input your query again or verify your settings configuration.", false);
+        });
+    }
+
+    sendBtn.addEventListener('click', submitChatMessage);
+    chatInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            submitChatMessage();
+        }
+    });
+
+    function sendQuickQuery(text) {
+        chatInput.value = text;
+        submitChatMessage();
+    }
+</script>
+{% endblock %}

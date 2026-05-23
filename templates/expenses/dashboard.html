@@ -1,0 +1,336 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard | Smart Finance Tracker{% endblock %}
+
+{% block extra_head %}
+<!-- ApexCharts for interactive charts -->
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+{% endblock %}
+
+{% block header_title %}Financial Dashboard{% endblock %}
+{% block header_subtitle %}Real-time portfolio metrics and smart insights.{% endblock %}
+
+{% block content %}
+<!-- Metrics Row -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <!-- Net Balance Card -->
+    <div class="glass-card p-6 hover-scale relative overflow-hidden flex items-center justify-between">
+        <div>
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Net Balance</span>
+            <h3 class="text-3xl font-extrabold text-white mt-2 flex items-baseline gap-1">
+                <span class="text-indigo-400 text-lg font-bold">{{ user.currency }}</span>
+                <span id="stat-balance" data-target="{{ total_balance }}">0.00</span>
+            </h3>
+            <p class="text-[10px] text-slate-500 font-medium mt-1">Across all synced wallets & accounts</p>
+        </div>
+        <div class="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+            <i class="bi bi-wallet2 text-indigo-400 text-xl"></i>
+        </div>
+    </div>
+    
+    <!-- Monthly Income Card -->
+    <div class="glass-card p-6 hover-scale relative overflow-hidden">
+        <div class="flex items-center justify-between">
+            <div>
+                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Monthly Receipts</span>
+                <h3 class="text-3xl font-extrabold text-white mt-2 flex items-baseline gap-1">
+                    <span class="text-emerald-400 text-lg font-bold">{{ user.currency }}</span>
+                    <span id="stat-income" data-target="{{ monthly_income }}">0.00</span>
+                </h3>
+            </div>
+            <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                <i class="bi bi-graph-up-arrow text-emerald-400 text-xl"></i>
+            </div>
+        </div>
+        <div class="mt-4">
+            <div class="flex justify-between text-[10px] text-slate-400 font-medium mb-1">
+                <span>Goal: {{ user.currency }} {{ user.monthly_income_goal }}</span>
+                <span>{{ income_progress|floatformat:1 }}%</span>
+            </div>
+            <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                <div class="bg-emerald-500 h-1.5 rounded-full transition-all duration-1000 max-w-full" style="width: {{ income_progress }}%"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Monthly Expenses Card -->
+    <div class="glass-card p-6 hover-scale relative overflow-hidden flex items-center justify-between">
+        <div>
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Monthly Outflows</span>
+            <h3 class="text-3xl font-extrabold text-white mt-2 flex items-baseline gap-1">
+                <span class="text-red-400 text-lg font-bold">{{ user.currency }}</span>
+                <span id="stat-expenses" data-target="{{ monthly_expenses }}">0.00</span>
+            </h3>
+            <p class="text-[10px] text-slate-500 font-medium mt-1">Total recorded debits this month</p>
+        </div>
+        <div class="w-12 h-12 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+            <i class="bi bi-cart-dash text-red-400 text-xl"></i>
+        </div>
+    </div>
+</div>
+
+<!-- Main Section Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+    <!-- Visual Charts -->
+    <div class="lg:col-span-2 glass-card p-6 flex flex-col justify-between min-h-[350px]">
+        <div class="flex justify-between items-center mb-4">
+            <h4 class="text-sm font-bold text-slate-200">Spending & Inflow Trends</h4>
+            <div class="flex gap-2">
+                <button class="px-2.5 py-1 text-[10px] font-bold rounded bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">Monthly</button>
+            </div>
+        </div>
+        <div id="chart-trends" class="w-full"></div>
+    </div>
+    
+    <!-- AI Finance health widget -->
+    <div class="glass-card p-6 flex flex-col justify-between">
+        <div class="text-center">
+            <h4 class="text-sm font-bold text-slate-200 mb-4">AI Financial Health Index</h4>
+            
+            <!-- Radial Score Chart -->
+            <div class="relative flex justify-center items-center">
+                <div id="chart-health" class="w-full max-w-[200px]"></div>
+                <div class="absolute text-center mt-3">
+                    <span id="health-percentage" class="text-3xl font-extrabold text-white">--</span>
+                    <p class="text-[9px] font-medium tracking-wider text-indigo-400 uppercase mt-0.5">Health Score</p>
+                </div>
+            </div>
+            
+            <p class="text-xs text-slate-400 px-4 mt-2">
+                Calculated by analyzing savings margin, budget compliance, and spending volatility.
+            </p>
+        </div>
+        
+        <div class="mt-6 p-4 rounded-xl bg-indigo-500/5 dark:bg-indigo-500/5 border border-indigo-500/10">
+            <div class="flex items-center gap-2 mb-2">
+                <i class="bi bi-stars text-indigo-400"></i>
+                <h5 class="text-xs font-bold text-slate-200">AI Next Month Prediction</h5>
+            </div>
+            <div class="flex justify-between items-center">
+                <span class="text-[10px] text-slate-400">Expected Expenses:</span>
+                <span id="predicted-expenses" class="text-xs font-bold text-white">--</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Lower Dashboard Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- AI Spending suggestions -->
+    <div class="lg:col-span-2 glass-card p-6">
+        <div class="flex items-center gap-2 mb-4">
+            <div class="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+                <i class="bi bi-magic text-indigo-400"></i>
+            </div>
+            <div>
+                <h4 class="text-sm font-bold text-slate-200">Personalized Insights</h4>
+                <p class="text-[10px] text-slate-500">Intelligent alerts & saving advisory</p>
+            </div>
+        </div>
+        
+        <!-- Suggestions List -->
+        <div id="insights-container" class="space-y-3">
+            <!-- Skeleton Screen while loading -->
+            <div class="animate-pulse space-y-2">
+                <div class="h-10 bg-slate-800 rounded-lg"></div>
+                <div class="h-10 bg-slate-800 rounded-lg"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Actions & Downloads -->
+    <div class="glass-card p-6 flex flex-col justify-between">
+        <div>
+            <h4 class="text-sm font-bold text-slate-200 mb-4">Statement Downloads</h4>
+            <div class="space-y-3">
+                <a href="{% url 'export_pdf' %}" class="flex items-center justify-between p-3 rounded-xl bg-slate-800/40 dark:bg-slate-950/40 border border-slate-800/50 hover:bg-slate-800/80 hover:border-slate-700 transition">
+                    <div class="flex items-center gap-3">
+                        <i class="bi bi-file-earmark-pdf-fill text-red-500 text-lg"></i>
+                        <div>
+                            <h5 class="text-xs font-bold text-slate-200">Export PDF Document</h5>
+                            <p class="text-[9px] text-slate-500">Visual PDF breakdown</p>
+                        </div>
+                    </div>
+                    <i class="bi bi-download text-slate-400"></i>
+                </a>
+                
+                <a href="{% url 'export_excel' %}" class="flex items-center justify-between p-3 rounded-xl bg-slate-800/40 dark:bg-slate-950/40 border border-slate-800/50 hover:bg-slate-800/80 hover:border-slate-700 transition">
+                    <div class="flex items-center gap-3">
+                        <i class="bi bi-file-earmark-excel-fill text-emerald-500 text-lg"></i>
+                        <div>
+                            <h5 class="text-xs font-bold text-slate-200">Export Excel Sheet</h5>
+                            <p class="text-[9px] text-slate-500">Full raw accounts data</p>
+                        </div>
+                    </div>
+                    <i class="bi bi-download text-slate-400"></i>
+                </a>
+            </div>
+        </div>
+        
+        <div class="mt-6 pt-4 border-t border-slate-800/50 flex gap-2">
+            <a href="{% url 'transactions_page' %}" class="flex-1 py-2 px-3 text-center text-xs font-bold rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white transition">
+                <i class="bi bi-plus-lg mr-1"></i> New Entry
+            </a>
+            <a href="{% url 'ai_assistant' %}" class="flex-1 py-2 px-3 text-center text-xs font-bold rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 transition">
+                <i class="bi bi-chat-left-dots mr-1"></i> Chat AI
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<!-- Dashboard Core Metrics & Charts Scripts -->
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // 1. Stat Counters animation
+        const animateCounter = (id, target) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const targetVal = parseFloat(target);
+            let current = 0;
+            const duration = 1200; // ms
+            const stepTime = 15;
+            const steps = duration / stepTime;
+            const inc = targetVal / steps;
+            
+            const timer = setInterval(() => {
+                current += inc;
+                if (current >= targetVal) {
+                    current = targetVal;
+                    clearInterval(timer);
+                }
+                el.textContent = current.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            }, stepTime);
+        };
+
+        const balTarget = document.getElementById('stat-balance').dataset.target;
+        const incTarget = document.getElementById('stat-income').dataset.target;
+        const expTarget = document.getElementById('stat-expenses').dataset.target;
+
+        animateCounter('stat-balance', balTarget);
+        animateCounter('stat-income', incTarget);
+        animateCounter('stat-expenses', expTarget);
+
+        // 2. Load Trend Charts
+        const initTrendsChart = () => {
+            const options = {
+                series: [{
+                    name: 'Receipts/Inflow',
+                    data: [parseFloat(incTarget) * 0.7, parseFloat(incTarget) * 0.9, parseFloat(incTarget)]
+                }, {
+                    name: 'Outflow/Expenses',
+                    data: [parseFloat(expTarget) * 0.8, parseFloat(expTarget) * 0.6, parseFloat(expTarget)]
+                }],
+                chart: {
+                    type: 'area',
+                    height: 260,
+                    toolbar: { show: false },
+                    background: 'transparent',
+                    foreColor: '#94a3b8'
+                },
+                colors: ['#10b981', '#ef4444'],
+                dataLabels: { enabled: false },
+                stroke: { curve: 'smooth', width: 2 },
+                fill: {
+                    type: 'gradient',
+                    gradient: {
+                        shadeIntensity: 1,
+                        opacityFrom: 0.25,
+                        opacityTo: 0.05,
+                        stops: [0, 90, 100]
+                    }
+                },
+                xaxis: {
+                    categories: ['2 months ago', 'Last month', 'Current month'],
+                    axisBorder: { show: false },
+                    axisTicks: { show: false }
+                },
+                yaxis: {
+                    labels: {
+                        formatter: function (val) {
+                            return val.toFixed(0);
+                        }
+                    }
+                },
+                grid: {
+                    borderColor: 'rgba(148, 163, 184, 0.06)',
+                    strokeDashArray: 4
+                },
+                tooltip: { theme: 'dark' }
+            };
+
+            const chart = new ApexCharts(document.querySelector("#chart-trends"), options);
+            chart.render();
+        };
+        initTrendsChart();
+
+        // 3. Load AI Insights dynamically
+        fetch('/api/ai/insights/')
+            .then(res => res.json())
+            .then(data => {
+                // Update Health Score
+                document.getElementById('health-percentage').textContent = data.health_score;
+                
+                // Update Predicted Expenses
+                document.getElementById('predicted-expenses').textContent = `{{ user.currency }} ${data.predicted_next_month_expenses.toFixed(2)}`;
+                
+                // Render health gauge chart
+                const healthOptions = {
+                    series: [data.health_score],
+                    chart: {
+                        type: 'radialBar',
+                        height: 180,
+                        offsetY: -10,
+                        sparkline: { enabled: true }
+                    },
+                    colors: [data.health_score >= 80 ? '#10b981' : data.health_score >= 50 ? '#fbbf24' : '#ef4444'],
+                    plotOptions: {
+                        radialBar: {
+                            startAngle: -90,
+                            endAngle: 90,
+                            track: {
+                                background: 'rgba(148, 163, 184, 0.08)',
+                                strokeWidth: '97%'
+                            },
+                            dataLabels: { show: false }
+                        }
+                    },
+                    grid: { padding: { top: -10 } },
+                    stroke: { lineCap: 'round' },
+                    tooltip: { enabled: false }
+                };
+                const healthChart = new ApexCharts(document.querySelector("#chart-health"), healthOptions);
+                healthChart.render();
+                
+                // Update Suggestions drawer
+                const container = document.getElementById('insights-container');
+                container.innerHTML = '';
+                
+                if (data.suggestions.length > 0) {
+                    data.suggestions.forEach(s => {
+                        const div = document.createElement('div');
+                        div.className = 'flex gap-3 p-3.5 rounded-xl bg-slate-900/40 dark:bg-slate-950/40 border border-slate-800/50 items-start hover:border-slate-800 transition';
+                        div.innerHTML = `
+                            <i class="bi bi-lightbulb-fill text-yellow-400 mt-0.5"></i>
+                            <div class="text-[11px] text-slate-300 leading-relaxed font-medium">${s}</div>
+                        `;
+                        container.appendChild(div);
+                    });
+                } else {
+                    container.innerHTML = `
+                        <div class="text-center p-6 text-slate-500 text-xs">
+                            No insights available. Log some transactions to generate tips.
+                        </div>
+                    `;
+                }
+            })
+            .catch(err => {
+                console.error("Error loading insights:", err);
+                const container = document.getElementById('insights-container');
+                container.innerHTML = `<div class="text-xs text-red-400">Failed to load financial recommendations.</div>`;
+            });
+    });
+</script>
+{% endblock %}

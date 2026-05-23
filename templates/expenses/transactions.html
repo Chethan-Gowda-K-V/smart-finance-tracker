@@ -1,0 +1,462 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Ledger & Scanning | Smart Finance Tracker{% endblock %}
+
+{% block extra_head %}
+<!-- Tesseract.js for Client-Side OCR Scanning -->
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+{% endblock %}
+
+{% block header_title %}Ledger & Scanning{% endblock %}
+{% block header_subtitle %}Input transactions via Voice, OCR scans, or manual form.{% endblock %}
+
+{% block content %}
+<!-- Control Center / Widgets Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+    <!-- OCR Receipt Scanner Widget -->
+    <div class="glass-card p-6 relative overflow-hidden flex flex-col justify-between min-h-[220px]">
+        <div id="ocr-scanner-laser" class="hidden scanner-laser"></div>
+        <div>
+            <div class="flex items-center gap-2 mb-3">
+                <i class="bi bi-camera-fill text-indigo-400"></i>
+                <h4 class="text-xs font-bold uppercase tracking-wider text-slate-200">OCR Receipt Scanner</h4>
+            </div>
+            <p class="text-[10px] text-slate-400 mb-4 leading-relaxed">
+                Drag and drop a receipt image or browse your files. Tesseract OCR will extract the transaction details instantly.
+            </p>
+        </div>
+        
+        <div id="ocr-dropzone" class="border border-dashed border-slate-700 hover:border-indigo-500 rounded-xl p-4 text-center cursor-pointer transition bg-slate-900/20 hover:bg-slate-900/50">
+            <input type="file" id="ocr-file-input" class="hidden" accept="image/*">
+            <i class="bi bi-cloud-upload text-2xl text-slate-500 mb-2 block"></i>
+            <span class="text-[10px] font-semibold text-slate-400">Drop receipt or click to browse</span>
+        </div>
+        
+        <div id="ocr-status" class="hidden mt-2 text-center text-[10px] font-medium text-slate-400">
+            <span class="animate-pulse">Processing OCR... Please wait.</span>
+        </div>
+    </div>
+    
+    <!-- Voice Expense Entry Widget -->
+    <div class="glass-card p-6 flex flex-col justify-between min-h-[220px]">
+        <div>
+            <div class="flex items-center gap-2 mb-3">
+                <i class="bi bi-mic-fill text-pink-400"></i>
+                <h4 class="text-xs font-bold uppercase tracking-wider text-slate-200">AI Voice Entry</h4>
+            </div>
+            <p class="text-[10px] text-slate-400 mb-4 leading-relaxed">
+                Tap the microphone and speak (e.g. "Spent fifteen dollars on taxi ride yesterday"). The AI parses your voice into a structured transaction.
+            </p>
+        </div>
+        
+        <div class="flex flex-col items-center justify-center gap-3">
+            <button id="voice-record-btn" class="w-14 h-14 rounded-full bg-pink-500/10 border border-pink-500/20 text-pink-500 hover:bg-pink-500 hover:text-white flex items-center justify-center text-xl shadow-lg transition-all duration-300 relative focus:outline-none">
+                <i class="bi bi-mic"></i>
+                <span id="voice-ripple" class="absolute inset-0 rounded-full bg-pink-500 opacity-20 scale-100 hidden"></span>
+            </button>
+            <span id="voice-status" class="text-[10px] font-bold text-slate-500">Tap to start speaking</span>
+        </div>
+        
+        <div id="voice-transcript-box" class="hidden p-2 rounded-lg bg-slate-950/40 border border-slate-800 text-[10px] text-slate-400 text-center truncate">
+            "..."
+        </div>
+    </div>
+    
+    <!-- Quick Add Manual Entry Widget -->
+    <div class="glass-card p-6 flex flex-col justify-between min-h-[220px]">
+        <div>
+            <div class="flex items-center gap-2 mb-3">
+                <i class="bi bi-keyboard-fill text-emerald-400"></i>
+                <h4 class="text-xs font-bold uppercase tracking-wider text-slate-200">Manual Entry</h4>
+            </div>
+            <p class="text-[10px] text-slate-400 mb-4 leading-relaxed">
+                Log a transaction manually by using our structured inputs. You can choose accounts, categories, and payment types.
+            </p>
+        </div>
+        
+        <button onclick="toggleModal('modal-add-transaction', true)" class="w-full py-3 px-4 border border-transparent text-xs font-bold rounded-xl text-white btn-neon flex items-center justify-center gap-2">
+            <i class="bi bi-plus-circle"></i>
+            <span>Open Entry Pad</span>
+        </button>
+    </div>
+</div>
+
+<!-- Transaction Table Ledger -->
+<div class="glass-card p-6">
+    <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
+        <h4 class="text-sm font-bold text-slate-200">Ledger Records</h4>
+        
+        <!-- Filters Bar -->
+        <form method="GET" action="{% url 'transactions_page' %}" class="flex flex-wrap items-center gap-3">
+            <!-- Search bar -->
+            <div class="relative">
+                <input type="text" name="q" value="{{ q }}" placeholder="Search details..." class="pl-8 pr-3 py-1.5 rounded-lg text-xs border border-slate-700 bg-slate-900/50 dark:bg-slate-950/50 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-44">
+                <i class="bi bi-search absolute left-2.5 top-2 text-slate-500 text-xs"></i>
+            </div>
+            
+            <!-- Period filter dropdown -->
+            <select name="period" onchange="this.form.submit()" class="px-3 py-1.5 rounded-lg text-xs border border-slate-700 bg-slate-900/50 dark:bg-slate-950/50 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="all" {% if period == 'all' %}selected{% endif %}>All Periods</option>
+                <option value="daily" {% if period == 'daily' %}selected{% endif %}>Today</option>
+                <option value="weekly" {% if period == 'weekly' %}selected{% endif %}>This Week</option>
+                <option value="monthly" {% if period == 'monthly' %}selected{% endif %}>This Month</option>
+            </select>
+            
+            {% if q or period != 'all' %}
+            <a href="{% url 'transactions_page' %}" class="text-[10px] font-bold text-indigo-400 hover:text-indigo-300">Clear Filters</a>
+            {% endif %}
+        </form>
+    </div>
+    
+    <!-- Table Container -->
+    <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="border-b border-slate-800 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    <th class="pb-3 pl-4">Date</th>
+                    <th class="pb-3">Account</th>
+                    <th class="pb-3">Category</th>
+                    <th class="pb-3">Type</th>
+                    <th class="pb-3">Description</th>
+                    <th class="pb-3 text-right pr-4">Amount</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/40 text-xs text-slate-300">
+                {% for tx in transactions %}
+                <tr class="hover:bg-slate-900/10 dark:hover:bg-slate-950/10 transition group">
+                    <td class="py-3.5 pl-4 font-medium">{{ tx.date|date:"Y-m-d" }}</td>
+                    <td class="py-3.5 text-slate-400">{{ tx.account.name }}</td>
+                    <td class="py-3.5 flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full inline-block" style="background-color: {{ tx.category.color }}"></span>
+                        <span>{{ tx.category.name }}</span>
+                    </td>
+                    <td class="py-3.5">
+                        {% if tx.type == 'income' %}
+                        <span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-bold">INFLOW</span>
+                        {% else %}
+                        <span class="px-2 py-0.5 rounded bg-red-500/10 text-red-400 text-[10px] font-bold">OUTFLOW</span>
+                        {% endif %}
+                    </td>
+                    <td class="py-3.5 text-slate-400 group-hover:text-slate-200 transition truncate max-w-[150px]">{{ tx.description|default:"-" }}</td>
+                    <td class="py-3.5 text-right pr-4 font-bold {% if tx.type == 'income' %}text-emerald-400{% else %}text-red-400{% endif %}">
+                        {% if tx.type == 'income' %}+{% else %}-{% endif %} {{ user.currency }} {{ tx.amount }}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center py-8 text-slate-500">
+                        No transactions registered for the selected filters.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ADD TRANSACTION MODAL -->
+<div id="modal-add-transaction" class="fixed inset-0 z-50 overflow-y-auto hidden flex items-center justify-center">
+    <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm" onclick="toggleModal('modal-add-transaction', false)"></div>
+    
+    <div class="glass-card max-w-md w-full p-8 relative z-10 m-4 animate-in fade-in zoom-in-95 duration-200">
+        <button class="absolute top-4 right-4 text-slate-500 hover:text-slate-300" onclick="toggleModal('modal-add-transaction', false)">
+            <i class="bi bi-x-lg"></i>
+        </button>
+        
+        <h3 id="modal-title" class="text-lg font-bold text-slate-200 mb-6 flex items-center gap-2">
+            <i class="bi bi-plus-circle text-indigo-400"></i>
+            <span>Log Transaction</span>
+        </h3>
+        
+        <form method="POST" action="{% url 'transactions_page' %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add_transaction">
+            
+            <div class="space-y-4">
+                <!-- Type Selection -->
+                <div class="grid grid-cols-2 gap-3">
+                    <label class="cursor-pointer">
+                        <input type="radio" name="type" value="expense" checked class="sr-only peer">
+                        <div class="py-2.5 text-center text-xs font-bold rounded-xl border border-slate-700 bg-slate-900/30 peer-checked:bg-red-500/10 peer-checked:border-red-500 peer-checked:text-red-400 transition">
+                            Outflow (Expense)
+                        </div>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="type" value="income" class="sr-only peer">
+                        <div class="py-2.5 text-center text-xs font-bold rounded-xl border border-slate-700 bg-slate-900/30 peer-checked:bg-emerald-500/10 peer-checked:border-emerald-500 peer-checked:text-emerald-400 transition">
+                            Inflow (Income)
+                        </div>
+                    </label>
+                </div>
+                
+                <!-- Amount -->
+                <div>
+                    <label for="form-amount" class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Amount ({{ user.currency }})</label>
+                    <input type="number" id="form-amount" name="amount" step="0.01" required class="appearance-none rounded-xl block w-full px-3 py-3 border border-slate-700 bg-slate-900/50 dark:bg-slate-950/50 text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm">
+                </div>
+                
+                <!-- Account -->
+                <div>
+                    <label for="form-account" class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Source Account</label>
+                    <select id="form-account" name="account" required class="appearance-none rounded-xl block w-full px-3 py-3 border border-slate-700 bg-slate-900/50 dark:bg-slate-950/50 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm">
+                        {% for acc in accounts %}
+                        <option value="{{ acc.id }}">{{ acc.name }} ({{ user.currency }} {{ acc.balance }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Category -->
+                <div>
+                    <label for="form-category" class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Category</label>
+                    <select id="form-category" name="category" required class="appearance-none rounded-xl block w-full px-3 py-3 border border-slate-700 bg-slate-900/50 dark:bg-slate-950/50 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm">
+                        {% for cat in categories %}
+                        <option value="{{ cat.id }}">{{ cat.name }} ({{ cat.type|upper }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Date -->
+                <div>
+                    <label for="form-date" class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Date</label>
+                    <input type="date" id="form-date" name="date" required class="appearance-none rounded-xl block w-full px-3 py-3 border border-slate-700 bg-slate-900/50 dark:bg-slate-950/50 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm">
+                </div>
+                
+                <!-- Description -->
+                <div>
+                    <label for="form-desc" class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Description</label>
+                    <input type="text" id="form-desc" name="description" placeholder="e.g. Starbucks, Uber ride" class="appearance-none rounded-xl block w-full px-3 py-3 border border-slate-700 bg-slate-900/50 dark:bg-slate-950/50 text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm">
+                </div>
+            </div>
+            
+            <button type="submit" class="w-full py-3 px-4 border border-transparent text-xs font-bold rounded-xl text-white btn-neon mt-6">
+                Save Log
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<!-- Modal Toggle Script -->
+<script>
+    function toggleModal(id, show) {
+        const modal = document.getElementById(id);
+        if (!modal) return;
+        if (show) {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            // Default today's date in form if empty
+            const dateInput = document.getElementById('form-date');
+            if (dateInput && !dateInput.value) {
+                dateInput.value = new Date().toISOString().substring(0, 10);
+            }
+        } else {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+    }
+</script>
+
+<!-- OCR Receipt Scanner Tesseract JS Integration -->
+<script>
+    const dropzone = document.getElementById('ocr-dropzone');
+    const fileInput = document.getElementById('ocr-file-input');
+    const statusDiv = document.getElementById('ocr-status');
+    const laser = document.getElementById('ocr-scanner-laser');
+
+    dropzone.addEventListener('click', () => fileInput.click());
+
+    dropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropzone.classList.add('border-indigo-500', 'bg-indigo-500/5');
+    });
+
+    dropzone.addEventListener('dragleave', () => {
+        dropzone.classList.remove('border-indigo-500', 'bg-indigo-500/5');
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('border-indigo-500', 'bg-indigo-500/5');
+        if (e.dataTransfer.files.length > 0) {
+            handleOcrFile(e.dataTransfer.files[0]);
+        }
+    });
+
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files.length > 0) {
+            handleOcrFile(fileInput.files[0]);
+        }
+    });
+
+    function handleOcrFile(file) {
+        statusDiv.classList.remove('hidden');
+        laser.classList.remove('hidden');
+        
+        Tesseract.recognize(
+            file,
+            'eng',
+            { logger: m => console.log(m) }
+        ).then(({ data: { text } }) => {
+            laser.classList.add('hidden');
+            statusDiv.classList.add('hidden');
+            
+            // simple regex numbers search
+            const amountMatches = text.match(/\$?\s*(\d+\.\d{2})\b/g);
+            let detectedAmt = 0.00;
+            
+            if (amountMatches && amountMatches.length > 0) {
+                // Parse amounts and find the highest one (usually represents the Total)
+                const amounts = amountMatches.map(m => parseFloat(m.replace(/[^0-9.]/g, '')));
+                detectedAmt = Math.max(...amounts);
+            }
+            
+            // Guessing description: search first non-numeric lines
+            const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 3);
+            let guessedDesc = "Receipt Scanner Invoice";
+            if (lines.length > 0) {
+                guessedDesc = lines[0];
+            }
+            
+            // Populating form and launching Modal
+            document.getElementById('form-amount').value = detectedAmt.toFixed(2);
+            document.getElementById('form-desc').value = guessedDesc;
+            
+            toggleModal('modal-add-transaction', true);
+            showToast("OCR Success", `Extracted Total: {{ user.currency }} ${detectedAmt.toFixed(2)} from receipt.`, 'savings_reminder');
+            
+            // Add a yellow highlight border to show autofilled values
+            const formFields = [document.getElementById('form-amount'), document.getElementById('form-desc')];
+            formFields.forEach(f => {
+                f.classList.add('ring-2', 'ring-indigo-500');
+                setTimeout(() => f.classList.remove('ring-2', 'ring-indigo-500'), 4000);
+            });
+        }).catch(err => {
+            console.error("Tesseract scan failed:", err);
+            laser.classList.add('hidden');
+            statusDiv.innerHTML = `<span class="text-red-400">Scan failed. Input details manually.</span>`;
+            setTimeout(() => statusDiv.classList.add('hidden'), 3000);
+        });
+    }
+</script>
+
+<!-- AI Web Speech Voice Parser Integration -->
+<script>
+    const voiceBtn = document.getElementById('voice-record-btn');
+    const voiceStatus = document.getElementById('voice-status');
+    const voiceTranscriptBox = document.getElementById('voice-transcript-box');
+    const voiceRipple = document.getElementById('voice-ripple');
+    
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    
+    if (SpeechRecognition) {
+        const recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.lang = 'en-US';
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+        
+        let isRecording = false;
+        
+        voiceBtn.addEventListener('click', () => {
+            if (!isRecording) {
+                recognition.start();
+            } else {
+                recognition.stop();
+            }
+        });
+        
+        recognition.onstart = () => {
+            isRecording = true;
+            voiceStatus.textContent = "Listening... Speak your expense details.";
+            voiceStatus.className = 'text-[10px] font-bold text-pink-400 animate-pulse';
+            voiceBtn.classList.add('bg-pink-500/20', 'border-pink-500', 'text-white');
+            voiceRipple.classList.remove('hidden');
+            voiceTranscriptBox.classList.add('hidden');
+        };
+        
+        recognition.onspeechend = () => {
+            recognition.stop();
+        };
+        
+        recognition.onend = () => {
+            isRecording = false;
+            voiceStatus.textContent = "Tap to start speaking";
+            voiceStatus.className = 'text-[10px] font-bold text-slate-500';
+            voiceBtn.classList.remove('bg-pink-500/20', 'border-pink-500', 'text-white');
+            voiceRipple.classList.add('hidden');
+        };
+        
+        recognition.onresult = (event) => {
+            const speechResult = event.results[0][0].transcript;
+            voiceTranscriptBox.textContent = `"${speechResult}"`;
+            voiceTranscriptBox.classList.remove('hidden');
+            
+            // Send transcript to backend voice parser
+            voiceStatus.textContent = "AI parsing voice transcript...";
+            voiceStatus.className = 'text-[10px] font-bold text-indigo-400';
+            
+            fetch('/api/ai/parse-voice/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({ text: speechResult })
+            })
+            .then(res => res.json())
+            .then(data => {
+                voiceStatus.textContent = "Success! Log details filled.";
+                voiceStatus.className = 'text-[10px] font-bold text-emerald-400';
+                
+                // Populate forms
+                document.getElementById('form-amount').value = data.amount;
+                document.getElementById('form-desc').value = data.description;
+                document.getElementById('form-date').value = data.date;
+                
+                if (data.category_id) {
+                    document.getElementById('form-category').value = data.category_id;
+                }
+                
+                // Set radio selection for income/expense
+                const radios = document.getElementsByName('type');
+                radios.forEach(r => {
+                    if (r.value === data.type) {
+                        r.checked = true;
+                    }
+                });
+                
+                toggleModal('modal-add-transaction', true);
+                
+                // Highlight autofilled values
+                const fields = [
+                    document.getElementById('form-amount'),
+                    document.getElementById('form-desc'),
+                    document.getElementById('form-date'),
+                    document.getElementById('form-category')
+                ];
+                fields.forEach(f => {
+                    f.classList.add('ring-2', 'ring-pink-500');
+                    setTimeout(() => f.classList.remove('ring-2', 'ring-pink-500'), 4000);
+                });
+            })
+            .catch(err => {
+                console.error("Voice parsing error:", err);
+                voiceStatus.textContent = "AI parsing failed. Please input manually.";
+                voiceStatus.className = 'text-[10px] font-bold text-red-400';
+            });
+        };
+        
+        recognition.onerror = (event) => {
+            console.error("Speech recognition error:", event.error);
+            voiceStatus.textContent = "Speech recognition error. Tap to try again.";
+            voiceStatus.className = 'text-[10px] font-bold text-red-400';
+        };
+    } else {
+        voiceBtn.disabled = true;
+        voiceStatus.textContent = "Speech Recognition not supported in this browser.";
+        voiceStatus.className = 'text-[9px] text-red-500';
+    }
+</script>
+{% endblock %}

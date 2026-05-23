@@ -1,0 +1,350 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Budgets & Savings | Smart Finance Tracker{% endblock %}
+
+{% block header_title %}Budgets & Savings Goals{% endblock %}
+{% block header_subtitle %}Set spending boundaries and monitor your wealth accumulation milestones.{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- BUDGET LIMITS CORNER (Left & Middle Columns) -->
+    <div class="lg:col-span-2 space-y-6">
+        <!-- Budget list card container -->
+        <div class="glass-card p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-sm font-bold text-slate-200 flex items-center gap-2">
+                    <i class="bi bi-wallet2 text-indigo-400"></i>
+                    <span>Monthly Budgets</span>
+                </h3>
+                <button onclick="toggleModal('modal-add-budget', true)" class="py-1 px-3 rounded-lg text-[10px] font-bold bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/30 transition">
+                    <i class="bi bi-plus-lg mr-1"></i> Set Budget
+                </button>
+            </div>
+            
+            <div id="budgets-container" class="space-y-5">
+                {% for b in budgets %}
+                <div class="p-4 rounded-xl bg-slate-900/30 dark:bg-slate-950/30 border border-slate-800/60 hover:border-slate-800 transition">
+                    <div class="flex justify-between items-center mb-2">
+                        <div>
+                            <h4 class="text-xs font-bold text-slate-200">
+                                {% if b.category %}{{ b.category.name }}{% else %}Global Limit{% endif %}
+                            </h4>
+                            <p class="text-[9px] text-slate-500 font-medium">Monthly boundary ({{ b.start_date }} to {{ b.end_date }})</p>
+                        </div>
+                        <span class="text-xs font-bold text-slate-100">{{ user.currency }} {{ b.amount }}</span>
+                    </div>
+                    <!-- Real-time progress tracker can be computed dynamically with JS or simple views context -->
+                    <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden mt-3">
+                        <!-- Default progress loader bar. We can dynamically calculate it in dashboard.html. For here, we'll keep a nice placeholder. -->
+                        <div class="bg-indigo-500 h-2 rounded-full" style="width: 45%"></div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center p-8 text-slate-500 text-xs">
+                    No limits set for this month. Create a budget boundary above!
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- SAVINGS MILESTONES CORNER (Right Column) -->
+    <div class="space-y-6">
+        <div class="glass-card p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-sm font-bold text-slate-200 flex items-center gap-2">
+                    <i class="bi bi-award-fill text-pink-400"></i>
+                    <span>Savings Goals</span>
+                </h3>
+                <button onclick="toggleModal('modal-add-goal', true)" class="py-1 px-3 rounded-lg text-[10px] font-bold bg-pink-500/20 text-pink-400 border border-pink-500/30 hover:bg-pink-500/30 transition">
+                    <i class="bi bi-plus-lg mr-1"></i> New Goal
+                </button>
+            </div>
+            
+            <div class="space-y-4">
+                {% for goal in savings_goals %}
+                <div class="p-4 rounded-xl bg-slate-900/30 dark:bg-slate-950/30 border border-slate-800/60 hover:border-slate-800 transition">
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <h4 class="text-xs font-bold text-slate-200">{{ goal.name }}</h4>
+                            <p class="text-[9px] text-slate-500 font-medium">Deadline: {{ goal.deadline }}</p>
+                        </div>
+                        {% if goal.is_completed %}
+                        <span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[8px] font-bold">COMPLETED</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="flex justify-between text-[9px] text-slate-400 font-medium mt-3 mb-1">
+                        <span>{{ user.currency }} {{ goal.current_amount }} saved</span>
+                        <span>Target: {{ user.currency }} {{ goal.target_amount }}</span>
+                    </div>
+                    
+                    <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                        <!-- We will fetch progress percentage using serializer or calculations. Let's compute a neat frontend helper. -->
+                        <div class="bg-pink-500 h-1.5 rounded-full" style="width: {% if goal.target_amount > 0 %}{% widthratio goal.current_amount goal.target_amount 100 %}{% else %}0{% endif %}%"></div>
+                    </div>
+                    
+                    {% if not goal.is_completed %}
+                    <button onclick="openAddFundsModal('{{ goal.id }}', '{{ goal.name }}')" class="w-full mt-4 py-1.5 px-3 rounded-lg text-[10px] font-bold bg-pink-500/10 text-pink-400 hover:bg-pink-500 hover:text-white border border-pink-500/20 text-center transition">
+                        <i class="bi bi-piggy-bank-fill mr-1"></i> Add Funds
+                    </button>
+                    {% endif %}
+                </div>
+                {% empty %}
+                <div class="text-center p-8 text-slate-500 text-xs">
+                    No active savings goals found. Set one to start allocating funds!
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SET BUDGET MODAL -->
+<div id="modal-add-budget" class="fixed inset-0 z-50 overflow-y-auto hidden flex items-center justify-center">
+    <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm" onclick="toggleModal('modal-add-budget', false)"></div>
+    <div class="glass-card max-w-md w-full p-8 relative z-10 m-4 animate-in fade-in zoom-in-95 duration-200">
+        <button class="absolute top-4 right-4 text-slate-500 hover:text-slate-300" onclick="toggleModal('modal-add-budget', false)">
+            <i class="bi bi-x-lg"></i>
+        </button>
+        
+        <h3 class="text-lg font-bold text-slate-200 mb-6 flex items-center gap-2">
+            <i class="bi bi-sliders text-indigo-400"></i>
+            <span>Set Monthly Budget</span>
+        </h3>
+        
+        <form id="form-create-budget">
+            {% csrf_token %}
+            <div class="space-y-4">
+                <!-- Category Select -->
+                <div>
+                    <label for="budget-category" class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Target Category</label>
+                    <select id="budget-category" name="category" class="appearance-none rounded-xl block w-full px-3 py-3 border border-slate-700 bg-slate-900/50 dark:bg-slate-950/50 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm">
+                        <option value="">Global (All categories)</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat.id }}">{{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Amount Limit -->
+                <div>
+                    <label for="budget-amount" class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Budget Limit ({{ user.currency }})</label>
+                    <input type="number" id="budget-amount" name="amount" step="0.01" required class="appearance-none rounded-xl block w-full px-3 py-3 border border-slate-700 bg-slate-900/50 dark:bg-slate-950/50 text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm">
+                </div>
+                
+                <!-- Time Range -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label for="budget-start" class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Start Date</label>
+                        <input type="date" id="budget-start" name="start_date" required class="appearance-none rounded-xl block w-full px-3 py-3 border border-slate-700 bg-slate-900/50 dark:bg-slate-950/50 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm">
+                    </div>
+                    <div>
+                        <label for="budget-end" class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">End Date</label>
+                        <input type="date" id="budget-end" name="end_date" required class="appearance-none rounded-xl block w-full px-3 py-3 border border-slate-700 bg-slate-900/50 dark:bg-slate-950/50 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm">
+                    </div>
+                </div>
+            </div>
+            
+            <button type="submit" class="w-full py-3 px-4 border border-transparent text-xs font-bold rounded-xl text-white btn-neon mt-6">
+                Establish Budget
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- SET SAVINGS GOAL MODAL -->
+<div id="modal-add-goal" class="fixed inset-0 z-50 overflow-y-auto hidden flex items-center justify-center">
+    <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm" onclick="toggleModal('modal-add-goal', false)"></div>
+    <div class="glass-card max-w-md w-full p-8 relative z-10 m-4 animate-in fade-in zoom-in-95 duration-200">
+        <button class="absolute top-4 right-4 text-slate-500 hover:text-slate-300" onclick="toggleModal('modal-add-goal', false)">
+            <i class="bi bi-x-lg"></i>
+        </button>
+        
+        <h3 class="text-lg font-bold text-slate-200 mb-6 flex items-center gap-2">
+            <i class="bi bi-award-fill text-pink-400"></i>
+            <span>Set Savings Goal</span>
+        </h3>
+        
+        <form id="form-create-goal">
+            {% csrf_token %}
+            <div class="space-y-4">
+                <!-- Goal Name -->
+                <div>
+                    <label for="goal-name" class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Goal Identifier/Name</label>
+                    <input type="text" id="goal-name" name="name" placeholder="e.g. New Macbook, Emergency Fund" required class="appearance-none rounded-xl block w-full px-3 py-3 border border-slate-700 bg-slate-900/50 dark:bg-slate-950/50 text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm">
+                </div>
+                
+                <!-- Target Limit -->
+                <div>
+                    <label for="goal-target" class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Target Savings ({{ user.currency }})</label>
+                    <input type="number" id="goal-target" name="target_amount" step="0.01" required class="appearance-none rounded-xl block w-full px-3 py-3 border border-slate-700 bg-slate-900/50 dark:bg-slate-950/50 text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm">
+                </div>
+                
+                <!-- Starting Balance -->
+                <div>
+                    <label for="goal-current" class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Starting Savings ({{ user.currency }})</label>
+                    <input type="number" id="goal-current" name="current_amount" step="0.01" value="0.00" class="appearance-none rounded-xl block w-full px-3 py-3 border border-slate-700 bg-slate-900/50 dark:bg-slate-950/50 text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm">
+                </div>
+                
+                <!-- Deadline Date -->
+                <div>
+                    <label for="goal-deadline" class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Target Deadline Date</label>
+                    <input type="date" id="goal-deadline" name="deadline" required class="appearance-none rounded-xl block w-full px-3 py-3 border border-slate-700 bg-slate-900/50 dark:bg-slate-950/50 text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm">
+                </div>
+            </div>
+            
+            <button type="submit" class="w-full py-3 px-4 border border-transparent text-xs font-bold rounded-xl text-white btn-neon mt-6">
+                Deploy Goal
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- ADD FUNDS TO SAVINGS GOAL MODAL -->
+<div id="modal-add-funds" class="fixed inset-0 z-50 overflow-y-auto hidden flex items-center justify-center">
+    <div class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm" onclick="toggleModal('modal-add-funds', false)"></div>
+    <div class="glass-card max-w-sm w-full p-8 relative z-10 m-4 animate-in fade-in zoom-in-95 duration-200">
+        <button class="absolute top-4 right-4 text-slate-500 hover:text-slate-300" onclick="toggleModal('modal-add-funds', false)">
+            <i class="bi bi-x-lg"></i>
+        </button>
+        
+        <h3 class="text-sm font-bold text-slate-200 mb-6 flex items-center gap-2">
+            <i class="bi bi-piggy-bank text-pink-400"></i>
+            <span id="funds-goal-name">Allocate Funds</span>
+        </h3>
+        
+        <form id="form-add-funds">
+            {% csrf_token %}
+            <input type="hidden" id="funds-goal-id" name="goal_id">
+            
+            <div>
+                <label for="funds-amount" class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Allocated Amount ({{ user.currency }})</label>
+                <input type="number" id="funds-amount" name="amount" step="0.01" required class="appearance-none rounded-xl block w-full px-3 py-3 border border-slate-700 bg-slate-900/50 dark:bg-slate-950/50 text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm">
+            </div>
+            
+            <button type="submit" class="w-full py-3 px-4 border border-transparent text-xs font-bold rounded-xl text-white btn-neon mt-6">
+                Fund Milestone
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    function toggleModal(id, show) {
+        const modal = document.getElementById(id);
+        if (!modal) return;
+        if (show) {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            // Auto pre-fill dates with defaults
+            const startInput = document.getElementById('budget-start');
+            if (startInput && !startInput.value) {
+                const today = new Date();
+                startInput.value = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().substring(0, 10);
+                const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                document.getElementById('budget-end').value = end.toISOString().substring(0, 10);
+                
+                document.getElementById('goal-deadline').value = new Date(today.getFullYear() + 1, today.getMonth(), today.getDate()).toISOString().substring(0, 10);
+            }
+        } else {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+    }
+    
+    function openAddFundsModal(id, name) {
+        document.getElementById('funds-goal-id').value = id;
+        document.getElementById('funds-goal-name').textContent = `Add Savings to: ${name}`;
+        toggleModal('modal-add-funds', true);
+    }
+</script>
+
+<!-- REST AJAX Forms integrations -->
+<script>
+    document.getElementById('form-create-budget').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const data = {
+            category: document.getElementById('budget-category').value || null,
+            amount: document.getElementById('budget-amount').value,
+            start_date: document.getElementById('budget-start').value,
+            end_date: document.getElementById('budget-end').value
+        };
+        
+        fetch('/api/budgets/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(res => {
+            if (res.ok) {
+                toggleModal('modal-add-budget', false);
+                window.location.reload();
+            } else {
+                alert("Failed to create budget boundary. Check inputs.");
+            }
+        });
+    });
+
+    document.getElementById('form-create-goal').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const data = {
+            name: document.getElementById('goal-name').value,
+            target_amount: document.getElementById('goal-target').value,
+            current_amount: document.getElementById('goal-current').value || "0.00",
+            deadline: document.getElementById('goal-deadline').value
+        };
+        
+        fetch('/api/savings-goals/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(res => {
+            if (res.ok) {
+                toggleModal('modal-add-goal', false);
+                window.location.reload();
+            } else {
+                alert("Failed to establish savings goal.");
+            }
+        });
+    });
+
+    document.getElementById('form-add-funds').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const id = document.getElementById('funds-goal-id').value;
+        const amount = document.getElementById('funds-amount').value;
+        
+        fetch(`/api/savings-goals/${id}/add_funds/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({ amount: amount })
+        })
+        .then(res => {
+            if (res.ok) {
+                toggleModal('modal-add-funds', false);
+                confetti({
+                    particleCount: 150,
+                    spread: 80,
+                    origin: { y: 0.6 }
+                });
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                alert("Failed to allocate funds.");
+            }
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,214 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Savings Challenge | Smart Finance Tracker{% endblock %}
+
+{% block header_title %}Savings Challenge & Quests{% endblock %}
+{% block header_subtitle %}Gamify your wealth-building experience and unlock elite financial ranks.{% endblock %}
+
+{% block content %}
+<!-- Level Tracker Widget -->
+<div class="glass-card p-8 mb-8 relative overflow-hidden flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+    <div class="scanner-laser opacity-20"></div>
+    
+    <div class="flex items-center gap-6">
+        <div class="w-20 h-20 rounded-2xl bg-gradient-to-tr from-purple-500 via-indigo-500 to-pink-500 p-0.5 shadow-lg shadow-indigo-500/20">
+            <div class="w-full h-full bg-slate-950 rounded-[14px] flex flex-col items-center justify-center">
+                <span class="text-[10px] font-bold text-indigo-400 tracking-widest uppercase">Rank</span>
+                <span class="text-3xl font-extrabold text-white leading-none">02</span>
+            </div>
+        </div>
+        
+        <div>
+            <h3 class="text-lg font-bold text-slate-100">Financial Navigator</h3>
+            <p class="text-[10px] text-slate-400 font-medium">Accumulating wealth points by hitting savings targets.</p>
+            
+            <div class="mt-4 flex items-center gap-3 w-72 md:w-96">
+                <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                    <div class="bg-gradient-to-r from-purple-500 via-indigo-500 to-pink-500 h-2 rounded-full" style="width: 65%"></div>
+                </div>
+                <span class="text-[10px] font-bold text-indigo-400 whitespace-nowrap">650 / 1000 XP</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="flex gap-4 md:border-l border-slate-800/80 md:pl-8">
+        <div>
+            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Total Wealth Points</span>
+            <span class="text-2xl font-black text-white">1,650 WPs</span>
+        </div>
+        <div>
+            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Completed Quests</span>
+            <span class="text-2xl font-black text-pink-400">{{ completed_goals }} Goals</span>
+        </div>
+    </div>
+</div>
+
+<!-- Grid for Badges and Quests -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- Rewards & Badges (Left/Middle Columns) -->
+    <div class="lg:col-span-2 space-y-6">
+        <div class="glass-card p-6">
+            <h3 class="text-sm font-bold text-slate-200 mb-6 flex items-center gap-2">
+                <i class="bi bi-patch-check-fill text-indigo-400"></i>
+                <span>Achievements Vault</span>
+            </h3>
+            
+            <!-- Badges Grid -->
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <!-- Achievement 1 -->
+                <div class="badge-card glass-card p-4 text-center flex flex-col items-center justify-between min-h-[140px] hover:border-indigo-500/30 transition cursor-pointer relative overflow-hidden group">
+                    <div class="absolute -top-10 -right-10 w-24 h-24 bg-indigo-500/10 rounded-full blur-xl group-hover:scale-150 transition duration-500"></div>
+                    <div class="w-12 h-12 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center text-xl shadow-inner mb-3">
+                        <i class="bi bi-award-fill"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-200">First Saver</h4>
+                        <p class="text-[9px] text-slate-500 mt-1">Logged first savings goal</p>
+                    </div>
+                </div>
+                
+                <!-- Achievement 2 -->
+                <div class="badge-card glass-card p-4 text-center flex flex-col items-center justify-between min-h-[140px] hover:border-pink-500/30 transition cursor-pointer relative overflow-hidden group">
+                    <div class="absolute -top-10 -right-10 w-24 h-24 bg-pink-500/10 rounded-full blur-xl group-hover:scale-150 transition duration-500"></div>
+                    <div class="w-12 h-12 rounded-full bg-pink-500/10 border border-pink-500/20 text-pink-400 flex items-center justify-center text-xl shadow-inner mb-3">
+                        <i class="bi bi-mic-fill"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-200">Speech Command</h4>
+                        <p class="text-[9px] text-slate-500 mt-1">Logged transaction via voice</p>
+                    </div>
+                </div>
+                
+                <!-- Achievement 3 -->
+                <div class="badge-card glass-card p-4 text-center flex flex-col items-center justify-between min-h-[140px] hover:border-emerald-500/30 transition cursor-pointer relative overflow-hidden group">
+                    <div class="absolute -top-10 -right-10 w-24 h-24 bg-emerald-500/10 rounded-full blur-xl group-hover:scale-150 transition duration-500"></div>
+                    <div class="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl shadow-inner mb-3">
+                        <i class="bi bi-camera-fill"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-200">OCR Scanner</h4>
+                        <p class="text-[9px] text-slate-500 mt-1">Uploaded receipt invoices</p>
+                    </div>
+                </div>
+                
+                <!-- Achievement 4 -->
+                <div class="badge-card glass-card p-4 text-center flex flex-col items-center justify-between min-h-[140px] hover:border-purple-500/30 transition cursor-pointer relative overflow-hidden group">
+                    <div class="absolute -top-10 -right-10 w-24 h-24 bg-purple-500/10 rounded-full blur-xl group-hover:scale-150 transition duration-500"></div>
+                    <div class="w-12 h-12 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center text-xl shadow-inner mb-3">
+                        <i class="bi bi-chat-heart-fill"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-200">AI Compliant</h4>
+                        <p class="text-[9px] text-slate-500 mt-1">Chatted with AI assistant</p>
+                    </div>
+                </div>
+                
+                <!-- Achievement 5 (Locked) -->
+                <div class="badge-card glass-card p-4 text-center flex flex-col items-center justify-between min-h-[140px] opacity-40 transition relative overflow-hidden group">
+                    <div class="w-12 h-12 rounded-full bg-slate-800 border border-slate-700 text-slate-500 flex items-center justify-center text-xl shadow-inner mb-3">
+                        <i class="bi bi-lock-fill"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-400">Wealth Builder</h4>
+                        <p class="text-[9px] text-slate-600 mt-1">Complete 3 savings goals</p>
+                    </div>
+                </div>
+                
+                <!-- Achievement 6 (Locked) -->
+                <div class="badge-card glass-card p-4 text-center flex flex-col items-center justify-between min-h-[140px] opacity-40 transition relative overflow-hidden group">
+                    <div class="w-12 h-12 rounded-full bg-slate-800 border border-slate-700 text-slate-500 flex items-center justify-center text-xl shadow-inner mb-3">
+                        <i class="bi bi-lock-fill"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-400">Super Accumulator</h4>
+                        <p class="text-[9px] text-slate-600 mt-1">Save over {{ user.currency }} 5,000</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quests list (Right Column) -->
+    <div class="space-y-6">
+        <div class="glass-card p-6">
+            <h3 class="text-sm font-bold text-slate-200 mb-6 flex items-center gap-2">
+                <i class="bi bi-flag-fill text-pink-400"></i>
+                <span>Active Finance Quests</span>
+            </h3>
+            
+            <div class="space-y-4">
+                <!-- Quest 1 -->
+                <div class="p-4 rounded-xl bg-slate-900/30 dark:bg-slate-950/30 border border-slate-800/60 flex items-start gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center text-sm flex-shrink-0 mt-0.5">
+                        <i class="bi bi-calendar-check"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-200">No Spend Weekend</h4>
+                        <p class="text-[9px] text-slate-500 mt-0.5">Avoid outflows on Saturdays & Sundays.</p>
+                        <span class="inline-block mt-2 text-[8px] font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full">+ 200 XP</span>
+                    </div>
+                </div>
+                
+                <!-- Quest 2 -->
+                <div class="p-4 rounded-xl bg-slate-900/30 dark:bg-slate-950/30 border border-slate-800/60 flex items-start gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-pink-500/10 border border-pink-500/20 text-pink-400 flex items-center justify-center text-sm flex-shrink-0 mt-0.5">
+                        <i class="bi bi-lightning-fill"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-200">Streak Master</h4>
+                        <p class="text-[9px] text-slate-500 mt-0.5">Log transaction records 5 days in a row.</p>
+                        <span class="inline-block mt-2 text-[8px] font-bold text-pink-400 bg-pink-500/10 px-2 py-0.5 rounded-full">+ 150 XP</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<!-- Hover Card 3D-effect GSAP Script -->
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const cards = document.querySelectorAll('.badge-card');
+        
+        cards.forEach(card => {
+            card.addEventListener('mousemove', (e) => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left - (rect.width / 2);
+                const y = e.clientY - rect.top - (rect.height / 2);
+                
+                gsap.to(card, {
+                    rotateX: -y * 0.15,
+                    rotateY: x * 0.15,
+                    transformPerspective: 600,
+                    scale: 1.03,
+                    duration: 0.25,
+                    ease: 'power1.out'
+                });
+            });
+            
+            card.addEventListener('mouseleave', () => {
+                gsap.to(card, {
+                    rotateX: 0,
+                    rotateY: 0,
+                    scale: 1,
+                    duration: 0.5,
+                    ease: 'power2.out'
+                });
+            });
+            
+            card.addEventListener('click', () => {
+                if (!card.classList.contains('opacity-40')) {
+                    confetti({
+                        particleCount: 80,
+                        spread: 50,
+                        origin: { y: 0.7 }
+                    });
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}
